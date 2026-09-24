@@ -131,6 +131,15 @@ def test_model_loads_once_and_without_remote_code(local_model):
     assert not any(kwargs.get("trust_remote_code") for _, kwargs in local_model.loads)
 
 
+def test_cpu_loads_the_model_in_bfloat16(local_model):
+    # Measured on the laptop CPU: float32 Phi-2 peaks at 10.9 GB, bfloat16 at 5.7 GB.
+    import torch
+
+    llm.local_generate("Find the ring.")
+    model_loads = [kwargs for _, kwargs in local_model.loads if "dtype" in kwargs]
+    assert model_loads == [{"dtype": torch.bfloat16}]
+
+
 def test_too_long_prompt_is_refused_not_cut(local_model):
     with pytest.raises(llm.PromptTooLong):
         llm.local_generate("word " * 1800)
