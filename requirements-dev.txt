@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==9.1.1
+# The bug tests load the original Phi-2 tool, which used LangChain's @tool decorator.
+langchain-core==1.6.4
+# The benchmarks measure memory with psutil.
+psutil==7.2.2
