@@ -16,6 +16,7 @@ DATASETS = {
     "Bank accounts": "fraud2.json",
 }
 ANALYSTS = {
+    "Graph detector (no key needed)": "detector",
     "Gemini (needs a free key)": "gemini",
     "Phi-2 on this computer": llm.PHI2,
 }
@@ -37,7 +38,9 @@ results = st.session_state.setdefault("results", {})
 
 if st.button("Search for Fraud"):
     choice = ANALYSTS[analyst_name]
-    if choice == "gemini":
+    if choice == "detector":
+        analyst = pipeline.detector_analyst()
+    elif choice == "gemini":
         analyst = pipeline.gemini_analyst(gemini_model, api_key or None)
     else:
         analyst = pipeline.local_analyst(choice)

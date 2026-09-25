@@ -1,7 +1,8 @@
 """The three roles, run in order:
 
-1. Sam, the analyst, names the suspects. Here the analyst is a language model
-   (Gemini, or Phi on this computer), as in the original app.
+1. Sam, the analyst, names the suspects. Sam is either the graph detector (exact,
+   and no key needed), or a language model (Gemini, or Phi on this computer), as
+   in the original app.
 2. Donna, the verifier, checks every name against the data.
 3. Henry, the graph-maker, keeps only the checked names as the ring to draw in red.
 """
@@ -10,7 +11,7 @@ from dataclasses import dataclass, field
 
 from pydantic import BaseModel
 
-from graph_detective import data, llm, verify
+from graph_detective import data, graph, llm, verify
 
 
 class SuspectList(BaseModel):
@@ -31,6 +32,12 @@ ANSWER_FORMAT = ('Answer only with JSON in this form: {"suspects": ["name", ...]
 
 def build_prompt(dataset):
     return f"{INSTRUCTIONS[dataset.kind]} {ANSWER_FORMAT}\n\n{data.compact_text(dataset)}"
+
+
+def detector_analyst():
+    def analyst(dataset):
+        return [person for ring in graph.detect(dataset) for person in ring.members]
+    return analyst
 
 
 def gemini_analyst(model=llm.DEFAULT_GEMINI_MODEL, api_key=None):

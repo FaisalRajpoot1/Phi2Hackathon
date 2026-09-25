@@ -25,6 +25,12 @@ def test_an_analyst_error_is_reported_not_raised():
     assert result.suspects == [] and result.ring == set()
 
 
+def test_the_detector_finds_the_sample_ring_with_no_key():
+    result = pipeline.run(data.load_sample("fraud.json"), pipeline.detector_analyst())
+    assert result.ring == {f"Person {n}" for n in range(1, 7)}
+    assert result.check.invented == []
+
+
 def test_gemini_analyst_sends_the_compact_data(monkeypatch):
     sent = []
 
