@@ -11,6 +11,7 @@ These files are the raw output behind every number in the main README. They were
 |---|---|---|
 | `round1_original_imports.txt` | How the original app's imports fail today, in an environment built from `legacy/requirements.txt` | `check_original_imports.py` |
 | `round1_first_page_load_original.txt` | The original app's first page load: it stops at `No module named 'layout'` | `bench_startup.py` |
+| `round1_original_gemini.txt` | The original app's Gemini call (the old SDK and `gemini-pro`), made on 25 September 2026: `404 ... not found` | `check_original_gemini.py` |
 | `round1_first_page_load_new.jsonl` | Five first page loads of the new app, each in a fresh Python process | `bench_startup.py` |
 | `round1_install_sizes.jsonl` | Size of `site-packages`: the original's requirements (today's versions), and the new `requirements.txt` | `bench_install_size.py` |
 | `round1_packages_original.txt`, `round1_packages_new.txt` | The installed packages of both environments (`pip freeze`) | — |

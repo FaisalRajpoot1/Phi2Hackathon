@@ -19,7 +19,7 @@ By September 2026, the original app no longer started, for two separate reasons:
 | `app.py` imports `layout.py`, which was never added to the repo | `ModuleNotFoundError: No module named 'layout'` |
 | The bundled 2024 copy of CrewAI needs the 2024 LangChain, and `requirements.txt` did not pin it | `ModuleNotFoundError: No module named 'langchain.agents.format_scratchpad'` (LangChain 1.4.2) |
 
-Google's side changed too: the app asked for `gemini-pro`, which Google has retired, through the `google-generativeai` library, whose support ended on 30 November 2025.
+Google's side changed too. Support for the `google-generativeai` library ended on 30 November 2025, and the model the app asked for is gone: the original call now fails with `404 models/gemini-pro is not found`. The same data through this fork's Gemini code named exactly Persons 1 to 6, with no invented names. (That sample gives its answer away, though: the ring is Accidents 1 to 5 and the lowest person numbers. Round 2 compares methods on data that doesn't.)
 
 **The bugs, proven with tests.** `tests/test_legacy_bugs.py` runs the unchanged original code, kept in [`legacy/`](legacy/), with fakes in place of the 5 GB model. Each bug is a strict expected failure, so it stays documented; the same check must pass on the new code.
 
