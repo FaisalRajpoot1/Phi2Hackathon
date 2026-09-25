@@ -42,6 +42,15 @@ def test_account_holders_share_the_root_address():
     assert (kinds["Address 1"], kinds["SSN 1"], kinds["Phone Number 1"]) == ("address", "ssn", "phone")
 
 
+def test_a_root_that_is_not_a_detail_is_not_shared():
+    tree = {"name": "Bank accounts", "children": [
+        {"name": "Ana", "children": [{"name": "SSN 1"}]},
+        {"name": "Ben", "children": [{"name": "SSN 2"}]},
+    ]}
+    identity = data.load(tree, "identity", "test")
+    assert identity.contexts == {"SSN 1", "SSN 2"}
+
+
 def test_compact_text_has_one_line_per_group():
     lines = data.compact_text(data.load_sample("fraud.json")).splitlines()
     assert len(lines) == 10

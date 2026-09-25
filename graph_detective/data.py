@@ -73,10 +73,12 @@ def load_claims(tree, name="claims"):
 
 
 def load_identity(tree, name="identity"):
-    shared_address = tree["name"]
+    # In fraud2.json the root is "Address 1", an address all the holders share. A root
+    # that is not an identity detail (for example "Bank accounts") is only a title.
+    shared = [tree["name"]] if base_label(tree["name"]) in DETAIL_KINDS else []
     records, lines = [], []
     for holder in tree["children"]:
-        details = [shared_address] + [item["name"] for item in holder["children"]]
+        details = shared + [item["name"] for item in holder["children"]]
         for detail in details:
             kind = DETAIL_KINDS.get(base_label(detail), base_label(detail))
             records.append(Record(detail, kind, holder["name"], "account holder"))
