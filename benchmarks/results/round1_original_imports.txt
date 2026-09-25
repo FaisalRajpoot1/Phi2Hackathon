@@ -1,0 +1,4 @@
+FAIL  layout, imported by app.py line 7: ModuleNotFoundError: No module named 'layout'
+FAIL  the bundled crewai, imported by app.py line 21: ModuleNotFoundError: No module named 'langchain.agents.format_scratchpad'
+OK    LangChain's Gemini connector, imported by app.py line 18
+OK    the old Google SDK, imported by app.py line 10

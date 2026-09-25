@@ -1,0 +1,8 @@
+=== 20:01:51 run 1 float32
+<temp>/bench/run_phi_load.sh: line 6:  4313 Segmentation fault         "$G/dev_env/Scripts/python" "$G/bench/bench_phi_load.py" --dtype $dtype >> "$G/results/round1_phi2_load.jsonl" 2>> "$G/results/round1_phi2_load.err"
+=== 20:02:32 run 1 bfloat16
+=== 20:04:39 run 2 float32
+=== 20:15:14 run 2 bfloat16
+=== 20:16:05 run 3 float32
+=== 20:17:02 run 3 bfloat16
+=== 20:17:57 done

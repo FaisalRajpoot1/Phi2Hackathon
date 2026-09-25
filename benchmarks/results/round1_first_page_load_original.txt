@@ -1,0 +1,19 @@
+────────────────────────── Traceback (most recent call last) ───────────────────────────
+  <temp>\orig_env\Lib\site-packages\streamlit\runtime\scr  
+  iptrunner\exec_code.py:129 in exec_func_with_error_handling                           
+                                                                                        
+  <temp>\orig_env\Lib\site-packages\streamlit\runtime\scr  
+  iptrunner\script_runner.py:807 in code_to_exec                                        
+                                                                                        
+  <repo>\legacy\app.py:7 in <module>                 
+                                                                                        
+      4                                                                                 
+      5 from SPARQLWrapper import SPARQLWrapper, JSON                                   
+      6 from streamlit_agraph import agraph, TripleStore, Node, Edge, Config            
+  >   7 from layout import footer                                                       
+      8 import json                                                                     
+      9                                                                                 
+     10 import google.generativeai as genai                                             
+────────────────────────────────────────────────────────────────────────────────────────
+ModuleNotFoundError: No module named 'layout'
+{"app": "<repo>\\legacy\\app.py", "rss_mb_before": 52, "first_load_s": 3.98, "rss_mb_after": 61, "error": "No module named 'layout'", "peak_mb": 61}
