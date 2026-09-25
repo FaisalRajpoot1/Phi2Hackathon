@@ -1,0 +1,5 @@
+{
+  "_note": "Safe, slow defaults, not this account's real free-tier limits (AI Studio shows those). The runner uses half of rpm, and it also stops by itself when Google answers that a limit is reached.",
+  "gemini-3.5-flash-lite": {"rpm": 10, "rpd": 250},
+  "gemini-3.8-flash": {"rpm": 10, "rpd": 250}
+}
