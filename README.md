@@ -1,6 +1,6 @@
 # Graph Detective (Phi2Hackathon)
 
-[![tests](https://github.com/FaisalRajpoot1/Phi2Hackathon/actions/workflows/tests.yml/badge.svg?branch=fork-improvements)](https://github.com/FaisalRajpoot1/Phi2Hackathon/actions/workflows/tests.yml)
+[![tests](https://github.com/FaisalRajpoot1/Phi2Hackathon/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/FaisalRajpoot1/Phi2Hackathon/actions/workflows/tests.yml)
 
 > **This is a fork.** Graph Detective was built in 24 hours by team **"The Phi Generation"** for lablab.ai's [Phi-2 Technology: 24 Hours Challenge](https://lablab.ai/event/phi-2-technology-24-hours-challenge/the-phi-generation/phi-generation-graph-detective) (February 2024), where it won **1st place**. The original code is by **Michael Lively** ([qaillc/Phi2Hackathon](https://github.com/qaillc/Phi2Hackathon)). I, Muhammad Faisal, was on the team. This fork makes the app run again on today's libraries, fixes the bugs that its tests prove, adds a fraud detector that it measures against AI, and runs a free live demo. See [What this fork changes](#what-this-fork-changes).
 >
