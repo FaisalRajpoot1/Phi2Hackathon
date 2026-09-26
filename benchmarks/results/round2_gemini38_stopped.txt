@@ -1,0 +1,2 @@
+gemini:gemini-3.8-flash insurance 10 2001 1 -> f1 1.0 54.125s
+STOPPED at ('gemini:gemini-3.8-flash', 'insurance', 10, 2001, 2): GeminiBusy: Gemini's free limit was reached. Please wait a minute and try again.

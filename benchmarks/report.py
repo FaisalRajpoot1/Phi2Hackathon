@@ -1,11 +1,12 @@
-"""Build the README's round 2 table from the raw benchmark rows.
+"""Build the README's round 2 tables from the raw benchmark rows.
 
-    python benchmarks/report.py            # print the table
-    python benchmarks/report.py --write    # also update it in README.md
+    python benchmarks/report.py            # print the tables
+    python benchmarks/report.py --write    # also update them in README.md
 
 Every row in benchmarks/results/round2_detection*.jsonl (but not the development
-file) is one method's answer on one generated graph. The table adds them up, so
-every number in it can be traced back to the raw rows.
+file) is one method's answer on one generated graph. The tables add them up, so
+every number in them can be traced back to the raw rows. The first table compares
+every method on the same small graphs; the second, the detector and Gemini on all sizes.
 """
 import argparse
 import json
@@ -16,8 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "benchmarks" / "results"
 README = ROOT / "README.md"
-START, END = "<!-- round2-table:start -->", "<!-- round2-table:end -->"
-FAMILIES = ["detector", "gemini", "local"]
+FAMILIES = ["detector", "gemini", "space", "local"]
+SMALL_SIZES = {10, 20, 40}
+ALL_SIZES_METHODS = {"detector", "gemini:gemini-3.5-flash-lite"}
 MODES = {"insurance": "Insurance claims", "identity": "Bank accounts"}
 
 
@@ -32,7 +34,7 @@ def load_rows():
 def summarize(rows):
     """Totals for each (method, mode). A prompt that did not fit is counted apart,
     not as an answer; an unreadable answer counts as an empty answer."""
-    lines = defaultdict(lambda: {"found": 0, "ring_people": 0, "false_flags": 0, "invented": 0,
+    lines = defaultdict(lambda: {"found": 0, "ring_people": 0, "flags": 0, "false_flags": 0, "invented": 0,
                                  "look_alikes": {}, "false_alarms": 0, "no_ring_graphs": 0,
                                  "unreadable": 0, "too_long": 0, "answers": 0, "seconds": []})
     for row in rows:
@@ -48,6 +50,7 @@ def summarize(rows):
             line["false_alarms"] += row["false_alarm"]
         line["found"] += row["correct"]
         line["ring_people"] += row["correct"] + row["missed"]
+        line["flags"] += row["correct"] + row["false_flags"]
         line["false_flags"] += row["false_flags"]
         line["invented"] += row["invented"]
         for kind, flagged in row["look_alikes_flagged"].items():
@@ -64,7 +67,8 @@ def method_label(method):
     family, _, model = method.partition(":")
     return {"detector": "Graph detector",
             "gemini": f"Gemini `{model}`, AI only",
-            "local": f"{model.split('/')[-1].capitalize()} on the laptop, AI only"}[family]
+            "space": f"{model.split('/')[-1]} on a free GPU, AI only",
+            "local": f"{model.split('/')[-1]} on the laptop, AI only"}[family]
 
 
 def duration(seconds):
@@ -75,36 +79,53 @@ def duration(seconds):
     return f"{seconds:.1f} s" if seconds < 120 else f"{seconds / 60:.1f} min"
 
 
-def table(rows):
+def share(part, whole):
+    return f"{part} of {whole} ({round(100 * part / whole)}%)" if whole else f"{part} of 0"
+
+
+def table(rows, sizes=None):
+    """One line per method and kind of data; `sizes` keeps only graphs of those sizes."""
+    if sizes is not None:
+        rows = [row for row in rows if row["size"] in sizes]
     order = lambda item: (FAMILIES.index(item[0][0].partition(":")[0]), item[0][0], list(MODES).index(item[0][1]))
-    out = ["| Method | Data | Ring people found | False flags | Invented names | Honest look-alikes flagged "
-           "| False alarms (graphs with no ring) | Unreadable / too long | Median time per graph |",
+    out = ["| Method | Data | Ring people found | Flags that were right | Honest look-alikes flagged "
+           "| False alarms (graphs with no ring) | Invented names | Unreadable / too long | Median time per graph |",
            "|---|---|---|---|---|---|---|---|---|"]
     for (method, mode), line in sorted(summarize(rows).items(), key=order):
-        look_alikes = "; ".join(f"{kind.replace('_', ' ')} {flagged} of {total}"
+        look_alikes = "; ".join(f"{kind.replace('_', ' ')} {share(flagged, total)}"
                                 for kind, (flagged, total) in sorted(line["look_alikes"].items()))
-        out.append(f"| {method_label(method)} | {MODES[mode]} | {line['found']} of {line['ring_people']} "
-                   f"| {line['false_flags']} | {line['invented']} | {look_alikes} "
-                   f"| {line['false_alarms']} of {line['no_ring_graphs']} "
+        out.append(f"| {method_label(method)} | {MODES[mode]} | {share(line['found'], line['ring_people'])} "
+                   f"| {share(line['found'], line['flags'])} | {look_alikes} "
+                   f"| {line['false_alarms']} of {line['no_ring_graphs']} | {line['invented']} "
                    f"| {line['unreadable']} / {line['too_long']} of {line['answers']} | {duration(line['median_s'])} |")
     return "\n".join(out)
 
 
-def write_readme(text):
+def tables(rows):
+    """The README's two tables, by name."""
+    return {"round2-small": table(rows, sizes=SMALL_SIZES),
+            "round2-all": table([row for row in rows if row["method"] in ALL_SIZES_METHODS])}
+
+
+def write_readme(blocks):
     readme = README.read_text(encoding="utf-8")
-    before, _, rest = readme.partition(START)
-    _, _, after = rest.partition(END)
-    README.write_text(f"{before}{START}\n{text}\n{END}{after}", encoding="utf-8")
+    for name, text in blocks.items():
+        start, end = f"<!-- {name}:start -->", f"<!-- {name}:end -->"
+        before, _, rest = readme.partition(start)
+        _, _, after = rest.partition(end)
+        readme = f"{before}{start}\n{text}\n{end}{after}"
+    README.write_text(readme, encoding="utf-8")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--write", action="store_true", help="update the table in README.md")
+    parser.add_argument("--write", action="store_true", help="update the tables in README.md")
     args = parser.parse_args()
-    text = table(load_rows())
-    print(text)
+    blocks = tables(load_rows())
+    for name, text in blocks.items():
+        print(f"{name}:\n{text}\n")
     if args.write:
-        write_readme(text)
+        write_readme(blocks)
 
 
 if __name__ == "__main__":

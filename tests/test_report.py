@@ -41,6 +41,29 @@ def test_an_unreadable_answer_counts_as_an_empty_answer():
     assert (line["found"], line["ring_people"]) == (0, 3)
 
 
+def test_the_share_of_flags_that_were_right_is_shown():
+    lines = report.table([row(correct=3, missed=1, false_flags=1)]).splitlines()
+    assert "3 of 4 (75%)" in lines[2]  # ring people found, and flags that were right
+
+
+def test_the_table_can_be_limited_to_some_graph_sizes():
+    rows = [row(correct=2, missed=1), {**row(correct=5, missed=5), "size": 300}]
+    assert "2 of 3" in report.table(rows, sizes={10}) and "5 of" not in report.table(rows, sizes={10})
+
+
+def test_the_readme_tables_match_the_raw_results():
+    readme = report.README.read_text(encoding="utf-8")
+    for name, text in report.tables(report.load_rows()).items():
+        block = f"<!-- {name}:start -->\n{text}\n<!-- {name}:end -->"
+        assert block in readme, f"The README's {name} table is out of date: run python benchmarks/report.py --write"
+
+
+def test_models_run_on_the_live_demos_gpu_get_their_own_line():
+    rows = [row(), row(method="space:microsoft/Phi-4-mini-instruct", correct=1, missed=1)]
+    lines = report.table(rows).splitlines()
+    assert "Phi-4-mini-instruct on a free GPU, AI only" in lines[3]
+
+
 def test_the_table_has_one_line_per_method_and_data_kind():
     rows = [row(correct=2, missed=1), row(method="gemini:gemini-x", correct=1, missed=2),
             row(method="gemini:gemini-x", mode="identity", correct=3)]
