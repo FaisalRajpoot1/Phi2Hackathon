@@ -20,7 +20,7 @@ These files are the raw output behind every number in the main README. They were
 | `round1_phi2_load_first_try.jsonl`, `.txt` | The first try, with torch 2.8.0, while other tests ran at the same time | `bench_phi_load.py` |
 
 Notes on the Phi-2 runs:
-- **Memory** is stable in every session: float32 peaks at 10.2 to 11.0 GB, bfloat16 at 5.7 GB.
+- **Memory** is stable in every session: float32 peaks at 10,190 to 10,987 MiB (about 10.7 to 11.5 GB), bfloat16 at 5,684 to 5,734 MiB (about 6.0 GB).
 - **Speed depends on power and the torch version.** Plugged in, with torch 2.14.0: bfloat16 1.84 against float32 1.11 tokens/s (medians). On battery, with torch 2.8.0: bfloat16 1.04 against float32 1.51. The README uses the plugged-in runs, because they match the app's settings (torch 2.14.0).
 - **One crash.** In the first try, one float32 run crashed with a segmentation fault while loading (see the `.txt` file). It did not happen again in 6 clean float32 runs, so it is not counted as a bug.
 - In float32, Windows often kept only part of the model in memory after loading (`rss_mb_after_load` between 415 and 4,470 MiB, against a peak of about 10,200). Paging the rest to disk is what makes float32 slow on a 16 GB laptop.

@@ -55,7 +55,8 @@ def load_local_model(model_id):
     keeps Phi-2 and Phi-4-mini); the laptop app only ever loads one.
 
     The model loads in bfloat16, also on a CPU: measured on a 16 GB laptop, Phi-2
-    peaks at 5.7 GB this way, against 11.0 GB in float32 (the original's setting).
+    peaks at 5,721 MiB (about 6.0 GB) this way, against 10,195 MiB (about 10.7 GB) in
+    float32, the original's setting.
     """
     import torch
     import transformers

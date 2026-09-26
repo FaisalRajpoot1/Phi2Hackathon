@@ -151,7 +151,7 @@ def test_two_models_can_stay_loaded(local_model):
 
 
 def test_cpu_loads_the_model_in_bfloat16(local_model):
-    # Measured on the laptop CPU: float32 Phi-2 peaks at 10.9 GB, bfloat16 at 5.7 GB.
+    # Measured on the laptop CPU: float32 Phi-2 peaks at 10,195 MiB, bfloat16 at 5,721 MiB.
     import torch
 
     llm.local_generate("Find the ring.")
