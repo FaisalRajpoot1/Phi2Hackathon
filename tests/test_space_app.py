@@ -17,12 +17,36 @@ ROOT = Path(__file__).resolve().parents[1]
 RING_1_TO_6 = {f"Person {n}" for n in range(1, 7)}
 
 
-@pytest.fixture(scope="module")
-def app():
-    spec = importlib.util.spec_from_file_location("space_app", ROOT / "space" / "app.py")
+def load_app(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "space" / "app.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture(scope="module")
+def app():
+    return load_app("space_app")
+
+
+def like_zerogpu(gpu_function):
+    """Like ZeroGPU: a GPU function runs in another process, and an exception it
+    raises comes back as a different error that only keeps the class name."""
+    def run(*args, **kwargs):
+        try:
+            return gpu_function(*args, **kwargs)
+        except Exception as error:
+            raise RuntimeError(type(error).__name__) from None
+    return run
+
+
+@pytest.fixture
+def zerogpu_app(monkeypatch):
+    """The app loaded with a @spaces.GPU that behaves like ZeroGPU, for every GPU function."""
+    import spaces
+
+    monkeypatch.setattr(spaces, "GPU", lambda duration=None: like_zerogpu)
+    return load_app("space_app_on_zerogpu")
 
 
 def red_labels(figure, app):
@@ -67,23 +91,36 @@ def test_the_explanation_shows_only_checked_reasons(app, monkeypatch):
 
 
 def test_the_ai_only_api_reads_answers_like_the_benchmark(app, monkeypatch):
-    monkeypatch.setattr(llm, "local_generate", lambda prompt, model_id: '{"suspects": ["Person 1"]}')
+    monkeypatch.setattr(llm, "local_generate", lambda prompt, model_id, max_new_tokens=None: '{"suspects": ["Person 1"]}')
     tree = (ROOT / "data" / "fraud.json").read_text(encoding="utf-8")
     answer = app.ai_only(tree, "claims", llm.PHI2)
     assert answer["names"] == ["Person 1"] and answer["error"] is None
 
 
 def test_the_ai_only_api_keeps_the_raw_text_of_an_unreadable_answer(app, monkeypatch):
-    monkeypatch.setattr(llm, "local_generate", lambda prompt, model_id: "Person 1 is suspicious")
+    monkeypatch.setattr(llm, "local_generate", lambda prompt, model_id, max_new_tokens=None: "Person 1 is suspicious")
     tree = (ROOT / "data" / "fraud.json").read_text(encoding="utf-8")
     answer = app.ai_only(tree, "claims", llm.PHI2)
     assert (answer["names"], answer["error"], answer["raw"]) == ([], "unreadable", "Person 1 is suspicious")
 
 
-def test_the_ai_only_api_reports_a_prompt_that_does_not_fit(app, monkeypatch):
-    def too_long(prompt, model_id):
-        raise llm.PromptTooLong("too long for Phi-2")
+def too_long(prompt, model_id, max_new_tokens=None):
+    raise llm.PromptTooLong("too long for Phi-2")
 
+
+def test_the_ai_only_api_reports_a_prompt_that_does_not_fit(app, monkeypatch):
     monkeypatch.setattr(llm, "local_generate", too_long)
     tree = (ROOT / "data" / "fraud.json").read_text(encoding="utf-8")
     assert app.ai_only(tree, "claims", llm.PHI2)["error"] == "too long"
+
+
+def test_a_prompt_that_does_not_fit_is_reported_even_on_zerogpu(zerogpu_app, monkeypatch):
+    monkeypatch.setattr(llm, "local_generate", too_long)
+    tree = (ROOT / "data" / "fraud.json").read_text(encoding="utf-8")
+    assert zerogpu_app.ai_only(tree, "claims", llm.PHI2)["error"] == "too long"
+
+
+def test_an_explanation_that_does_not_fit_is_reported_even_on_zerogpu(zerogpu_app, monkeypatch):
+    monkeypatch.setattr(llm, "local_generate", too_long)
+    _, _, dataset = zerogpu_app.find_rings(zerogpu_app.SAMPLE_NAMES[0], None, "Insurance claims")
+    assert "too long" in zerogpu_app.explain_rings(dataset)

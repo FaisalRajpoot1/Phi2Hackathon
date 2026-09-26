@@ -93,7 +93,13 @@ def find_rings(sample, upload, kind):
 
 @spaces.GPU(duration=60)
 def gpu_generate(prompt, model_id, max_new_tokens=llm.MAX_NEW_TOKENS):
-    return llm.local_generate(prompt, model_id=model_id, max_new_tokens=max_new_tokens)
+    """Runs on the GPU. Returns (text, error). A prompt that doesn't fit is returned,
+    not raised: ZeroGPU runs this function in another process, and turns an exception
+    into a different one that only keeps the class name."""
+    try:
+        return llm.local_generate(prompt, model_id=model_id, max_new_tokens=max_new_tokens), None
+    except llm.PromptTooLong as error:
+        return "", str(error)
 
 
 def explain_rings(dataset):
@@ -102,7 +108,13 @@ def explain_rings(dataset):
     rings = graph.detect(dataset)
     if not rings:
         return "There is no ring to explain."
-    ask = lambda prompt, schema: explain.read_reasons(gpu_generate(prompt, llm.PHI4_MINI, explain.EXPLAIN_TOKENS))
+
+    def ask(prompt, schema):
+        text, error = gpu_generate(prompt, llm.PHI4_MINI, explain.EXPLAIN_TOKENS)
+        if error:
+            raise llm.PromptTooLong(error)
+        return explain.read_reasons(text)
+
     result = explain.explain(dataset, rings, ask)
     if result.error:
         return f"The AI could not explain the rings: {result.error}"
@@ -117,11 +129,6 @@ def explain_rings(dataset):
     return "\n".join(lines)
 
 
-@spaces.GPU(duration=60)
-def gpu_ai_only(prompt, model_id):
-    return llm.local_generate(prompt, model_id=model_id)
-
-
 def ai_only(tree_json: str, kind: str, model_id: str) -> dict:
     """For the benchmark: a model looks for the ring on its own, exactly as
     benchmarks/bench_detection.py does on a laptop. Returns the names it gave, an
@@ -130,14 +137,15 @@ def ai_only(tree_json: str, kind: str, model_id: str) -> dict:
         raise gr.Error(f"Unknown model. Use one of: {', '.join(MODELS)}")
     dataset = data.load(json.loads(tree_json), kind, "api")
     start = time.perf_counter()
-    raw, names, error = "", [], None
-    try:
-        raw = gpu_ai_only(pipeline.build_prompt(dataset), model_id)
-        names = pipeline.parse_suspects(raw)
-    except llm.PromptTooLong:
+    names, error = [], None
+    raw, too_long = gpu_generate(pipeline.build_prompt(dataset), model_id)
+    if too_long:
         error = "too long"
-    except llm.BadAnswer:
-        error = "unreadable"
+    else:
+        try:
+            names = pipeline.parse_suspects(raw)
+        except llm.BadAnswer:
+            error = "unreadable"
     return {"names": names, "error": error, "raw": raw, "seconds": round(time.perf_counter() - start, 3)}
 
 
