@@ -142,8 +142,10 @@ class FakeCausalLM:
 
     def __init__(self):
         self.calls = []
+        self.moved_to = None
 
     def to(self, device):
+        self.moved_to = device
         return self
 
     def eval(self):

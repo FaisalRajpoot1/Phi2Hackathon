@@ -26,3 +26,24 @@ jobs:
         env:
           RUN_TINY_MODEL: "1"
         run: python -m pytest -q
+
+  space:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: space/requirements.txt
+
+      # The same versions as the Hugging Face Space; Gradio comes from its sdk_version.
+      - name: Install dependencies
+        run: pip install -r space/requirements.txt gradio==6.28.0 pytest --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - name: Run the Space app and core tests
+        run: >-
+          python -m pytest -q tests/test_space_app.py tests/test_graph.py tests/test_explain.py
+          tests/test_data.py tests/test_verify.py tests/test_pipeline.py tests/test_llm.py
+          tests/test_synth.py tests/test_evaluate.py

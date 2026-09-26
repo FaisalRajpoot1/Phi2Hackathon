@@ -18,6 +18,9 @@ PHI2 = "microsoft/phi-2"
 PHI4_MINI = "microsoft/Phi-4-mini-instruct"
 MAX_NEW_TOKENS = 256
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# None: a GPU if this computer has one, else the CPU. The live demo sets "cuda":
+# on ZeroGPU the models must go to the GPU when the app starts, before one is attached.
+DEVICE = None
 
 
 class PromptTooLong(ValueError):
@@ -57,7 +60,7 @@ def load_local_model(model_id):
     import torch
     import transformers
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = DEVICE or ("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
     model = transformers.AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.bfloat16)
     return tokenizer, model.to(device).eval()

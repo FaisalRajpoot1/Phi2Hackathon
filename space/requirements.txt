@@ -1,0 +1,7 @@
+torch==2.8.0
+transformers==5.17.0
+spaces==0.51.3
+google-genai==2.25.0
+networkx==3.7
+pydantic==2.13.5
+plotly==7.1.0

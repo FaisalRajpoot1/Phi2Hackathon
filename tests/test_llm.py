@@ -131,6 +131,18 @@ def test_model_loads_once_and_without_remote_code(local_model):
     assert not any(kwargs.get("trust_remote_code") for _, kwargs in local_model.loads)
 
 
+def test_the_live_demo_can_put_the_model_on_its_gpu(local_model, monkeypatch):
+    # On ZeroGPU there is no GPU when the app starts, yet the model must go to "cuda".
+    monkeypatch.setattr(llm, "DEVICE", "cuda")
+    llm.load_local_model(llm.PHI2)
+    assert local_model.model.moved_to == "cuda"
+
+
+def test_without_a_setting_a_computer_with_no_gpu_uses_the_cpu(local_model):
+    llm.load_local_model(llm.PHI2)
+    assert local_model.model.moved_to == "cpu"
+
+
 def test_two_models_can_stay_loaded(local_model):
     # The live demo keeps Phi-2 and Phi-4-mini on its GPU, and switches between them.
     for model_id in (llm.PHI2, llm.PHI4_MINI, llm.PHI2):
