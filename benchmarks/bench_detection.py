@@ -1,6 +1,7 @@
 """Compare the detector with AI-only detection, on generated data with an answer key.
 
     python benchmarks/bench_detection.py --methods detector gemini:gemini-3.5-flash-lite local:microsoft/phi-2
+    python benchmarks/bench_detection.py --methods space:microsoft/phi-2   # on the live demo's free GPU
     python benchmarks/bench_detection.py --methods detector --dev      # development seeds only
     python benchmarks/bench_detection.py --timing                      # the detector on very large graphs
 
@@ -30,10 +31,12 @@ from graph_detective import data, evaluate, graph, llm, pipeline, synth  # noqa:
 MODES = {"insurance": "claims", "identity": "identity"}
 TEST_SEEDS = [(2001, 1), (2002, 1), (2003, 1), (2004, 1), (2005, 0)]  # (seed, rings): 4 with a ring, 1 without
 DEV_SEEDS = [(seed, 1) for seed in range(1000, 1010)]
-SIZES = {"detector": [10, 20, 40, 100, 300], "gemini": [10, 20, 40, 100, 300], "local": [10, 20, 40]}
-RUNS = {"detector": 1, "gemini": 3, "local": 1}
+SIZES = {"detector": [10, 20, 40, 100, 300], "gemini": [10, 20, 40, 100, 300], "local": [10, 20, 40],
+         "space": [10, 20, 40]}
+RUNS = {"detector": 1, "gemini": 3, "local": 1, "space": 1}
 TIMING_SIZES = [1_000, 10_000, 100_000]
 LIMITS_FILE = ROOT / "benchmarks" / "gemini_limits.json"
+SPACE_ID = "Faisal87/graph-detective"
 
 
 class StopRun(Exception):
@@ -41,9 +44,33 @@ class StopRun(Exception):
 
 
 def generate(mode, seed, size, rings):
+    """(dataset, truth, tree). The dataset keeps its tree, for the live demo's API."""
     make = synth.insurance if mode == "insurance" else synth.identity
     tree, truth = make(seed=seed, rings=rings, **({"claims": size} if mode == "insurance" else {"holders": size}))
-    return data.load(tree, MODES[mode], f"{mode}-{size}-{seed}"), truth
+    dataset = data.load(tree, MODES[mode], f"{mode}-{size}-{seed}")
+    dataset.tree = tree
+    return dataset, truth, tree
+
+
+class SpaceAnalyst:
+    """A local model on the live demo's free GPU, through its ai_only API. The Space
+    builds the same prompt and reads the answer the same way as a laptop run."""
+
+    def __init__(self, model_id, client=None):
+        if client is None:
+            from gradio_client import Client
+            from huggingface_hub import get_token
+
+            client = Client(SPACE_ID, token=get_token(), verbose=False)
+        self.model_id, self.client = model_id, client
+
+    def __call__(self, dataset):
+        answer = self.client.predict(json.dumps(dataset.tree), dataset.kind, self.model_id, api_name="/ai_only")
+        if answer["error"] == "too long":
+            raise llm.PromptTooLong(f"The prompt is too long for {self.model_id}.")
+        if answer["error"] == "unreadable":
+            raise llm.BadAnswer("The answer has no JSON list of suspects.", raw=answer["raw"])
+        return answer["names"]
 
 
 class Gemini:
@@ -71,23 +98,27 @@ def analyst_for(method, rows):
         return Gemini(model, sum(1 for row in rows.values() if row["method"] == method and row["date"] == today))
     if kind == "local":
         return pipeline.local_analyst(model)
+    if kind == "space":
+        return SpaceAnalyst(model)
     raise SystemExit(f"Unknown method: {method}")
 
 
 def answer(analyst, dataset):
-    """(names, error, seconds). Only errors that are real answers are returned."""
+    """(names, error, raw text of an unreadable answer, seconds). Only errors that
+    are real answers are returned; anything else stops the run."""
     start = time.perf_counter()
+    raw = None
     try:
         names, error = list(analyst(dataset)), None
-    except llm.BadAnswer:
-        names, error = [], "unreadable"
+    except llm.BadAnswer as unreadable:
+        names, error, raw = [], "unreadable", unreadable.raw
     except llm.PromptTooLong:
         names, error = [], "too long"
     except StopRun:
         raise
     except Exception as problem:
         raise StopRun(f"{type(problem).__name__}: {problem}") from problem
-    return names, error, round(time.perf_counter() - start, 3)
+    return names, error, raw, round(time.perf_counter() - start, 3)
 
 
 def load_rows(path):
@@ -111,9 +142,9 @@ def run_quality(methods, seeds, out):
                         key = (method, mode, size, seed, run)
                         if key in rows:
                             continue
-                        dataset, truth = generate(mode, seed, size, rings)
+                        dataset, truth, _ = generate(mode, seed, size, rings)
                         try:
-                            names, error, seconds = answer(analyst, dataset)
+                            names, error, raw, seconds = answer(analyst, dataset)
                         except StopRun as stop:
                             print(f"STOPPED at {key}: {stop}")
                             return
@@ -121,6 +152,8 @@ def run_quality(methods, seeds, out):
                                "date": datetime.date.today().isoformat(), "names": names, "error": error,
                                "seconds": seconds, "prompt_chars": len(pipeline.build_prompt(dataset)),
                                **evaluate.score(names, truth)}
+                        if raw is not None:
+                            row["raw"] = raw
                         rows[key] = row
                         with out.open("a", encoding="utf-8") as file:
                             file.write(json.dumps(row) + "\n")
@@ -129,7 +162,7 @@ def run_quality(methods, seeds, out):
 
 def run_timing(out):
     for size in TIMING_SIZES:
-        dataset, truth = generate("insurance", 3001, size, 3)
+        dataset, truth, _ = generate("insurance", 3001, size, 3)
         seconds = []
         for _ in range(5):
             start = time.perf_counter()

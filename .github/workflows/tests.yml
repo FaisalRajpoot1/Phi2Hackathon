@@ -38,9 +38,9 @@ jobs:
           cache: pip
           cache-dependency-path: space/requirements.txt
 
-      # The same versions as the Hugging Face Space; Gradio comes from its sdk_version.
+      # Installed like the Hugging Face Space does, extras included, so conflicts show up here first.
       - name: Install dependencies
-        run: pip install -r space/requirements.txt gradio==6.28.0 pytest --extra-index-url https://download.pytorch.org/whl/cpu
+        run: pip install -r space/requirements.txt "gradio[oauth,mcp]==6.28.0" pytest --extra-index-url https://download.pytorch.org/whl/cpu
 
       - name: Run the Space app and core tests
         run: >-
