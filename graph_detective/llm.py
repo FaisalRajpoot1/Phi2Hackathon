@@ -46,9 +46,10 @@ class BadAnswer(ValueError):
 
 # ---- Local models (Phi) ---------------------------------------------------
 
-@functools.lru_cache(maxsize=1)
+@functools.lru_cache(maxsize=2)
 def load_local_model(model_id):
-    """Load a model and its tokenizer once. Only one model is kept, to save memory.
+    """Load a model and its tokenizer once. At most two models are kept (the live demo
+    keeps Phi-2 and Phi-4-mini); the laptop app only ever loads one.
 
     The model loads in bfloat16, also on a CPU: measured on a 16 GB laptop, Phi-2
     peaks at 5.7 GB this way, against 11.0 GB in float32 (the original's setting).

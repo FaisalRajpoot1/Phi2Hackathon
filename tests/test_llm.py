@@ -131,6 +131,13 @@ def test_model_loads_once_and_without_remote_code(local_model):
     assert not any(kwargs.get("trust_remote_code") for _, kwargs in local_model.loads)
 
 
+def test_two_models_can_stay_loaded(local_model):
+    # The live demo keeps Phi-2 and Phi-4-mini on its GPU, and switches between them.
+    for model_id in (llm.PHI2, llm.PHI4_MINI, llm.PHI2):
+        llm.local_generate("Find the ring.", model_id=model_id)
+    assert [name for name, _ in local_model.loads] == [llm.PHI2, llm.PHI2, llm.PHI4_MINI, llm.PHI4_MINI]
+
+
 def test_cpu_loads_the_model_in_bfloat16(local_model):
     # Measured on the laptop CPU: float32 Phi-2 peaks at 10.9 GB, bfloat16 at 5.7 GB.
     import torch
